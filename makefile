@@ -1,31 +1,39 @@
-EXE = stack
-COMPILE = gcc
-FLAGS = -g -Wall
-LIBS = 
-SRC_DIR = src
-SRC = stack.c \
-	  main.c
-INCLUDE = include
-INCLUDE_BUILD = -I$(INCLUDE)\
-				-I.
-DEBUG_DIR = debug
-SRC_BUILD = $(patsubst %.c, $(DEBUG_DIR)/%.o, $(SRC))
-
+target = stack
+compile = gcc
+flags = -g -Wall -fprofile-arcs -ftest-coverage
+source_dir = source
+debug_dir = debug
+source = main.c
+include = -Iinclude \
+		  -I.
+libs = -Llib -lstack -lgcov
+source_build = $(patsubst %.c, $(debug_dir)/%.o,$(source))
+lib_dir = lib
+make_lib = lib.mk
 
 
 .PHONY: debug
-debug:
-	[ -d $(DEBUG_DIR)] || mkdir -p $(DEBUG_DIR)
-	make $(EXE)
-.PHONY: run
-run: debug
-	./$(EXE)
+debug: lib $(debug_dir)/$(target)
+
 .PHONY: clean
 clean:
-	rm -rf $(EXE) $(DEBUG_DIR)/*
-$(DEBUG_DIR)/%.o : $(SRC_DIR)/%.c
-	$(COMPILE) $(FLAGS) -c -o $@ $< $(INCLUDE_BUILD) $(LIBS)
+	rm -rf $(debug_dir) $(lib_dir)
 
-$(EXE): $(SRC_BUILD)
-	$(COMPILE) $(FLAGS) -o $@ $^ $(INCLUDE_BUILD) $(LIBS)
+.PHONY: lib
+lib: makedir
+	make -f $(make_lib) debug
+.PHONY: run
+run: debug
+	./$(debug_dir)/$(target)
 
+# Compile
+$(debug_dir)/%.o: $(source_dir)/%.c
+	$(compile) $(flags) -c -o $@ $< $(include) $(libs)
+# Linking
+$(debug_dir)/$(target):$(source_build)
+	$(compile) $(flags) -o $@ $^ $(include) $(libs)
+
+
+makedir:
+	[ -d $(debug_dir) ] || mkdir -p $(debug_dir)
+	[ -d $(lib_dir) ] || mkdir -p $(lib_dir)
